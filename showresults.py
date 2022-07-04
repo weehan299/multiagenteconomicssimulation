@@ -39,10 +39,10 @@ def results(env):
     normalised_profits = normalised_measure(average_profits, competitive_profits, monopoly_profits)
 
     print(tabulate({"Name": name,
-                "Competitive Price": env.competitive_prices_array,
+                "Bertrand-Nash Price": env.competitive_prices_array,
                 "Monopoly Price": env.monopoly_prices_array,
                 "Average Price": average_prices,
-                "Competitive Profit": competitive_profits,
+                "Bertrand-Nash Profit": competitive_profits,
                 "Monopoly Profit": monopoly_profits,
                 "Normalised Profits": normalised_profits,
             }, 
