@@ -10,12 +10,6 @@ from demand import Demand
 from agent import Agent
 from validators import validate_total_periods,validate_action_space_num,validate_xi
 
-########## economic environment ##########
-#agents
-#action space
-#competitive and monopoly prices <- demand <- quality, price
-#state space
-#demand, marginal costs, quality
 
 
 @define
@@ -30,8 +24,12 @@ class EconomicEnvironment:
     monopoly_prices_array: np.array = field(init=False)
 
     action_space_num: int = field(default = 15, validator=[validators.instance_of(int), validate_action_space_num] )
-    total_periods: int = field(default=1000, validator=[validators.instance_of(int), validate_total_periods])
+    total_periods: int = field(default=100000, validator=[validators.instance_of(int), validate_total_periods])
     xi: float = field(default=0.1, validator=[validators.instance_of(float), validate_xi])
+
+    tstable:int = 100000
+    tscore:int = 0
+    
 
     price_history: list = field(factory=list)
     quantity_history: list = field(factory=list)
@@ -56,18 +54,18 @@ class EconomicEnvironment:
         quantity_array = self.demand.get_quantity_demand(curr_state, self.quality_array)
         prev_reward_array = (curr_state - self.marginal_cost_array) * quantity_array
 
-        for time in tqdm(range(self.total_periods)):
+        for t in tqdm(range(self.total_periods)):
 
             next_state = np.array(
-                [agent.pick_strategy(curr_state, self.action_space, time) for agent in self.agents]
+                [agent.pick_strategy(curr_state, self.action_space, t) for agent in self.agents]
             )
             
             new_quantity_array = self.demand.get_quantity_demand(next_state, self.quality_array)
             reward_array = (next_state - self.marginal_cost_array) * new_quantity_array
 
             for agent, action, prev_action, reward, prev_reward in zip(
-                self.agents, next_state, curr_state, reward_array, prev_reward_array
-            ):
+                self.agents, next_state, curr_state, reward_array, prev_reward_array):
+
                 agent.learn(
                     old_state = prev_state,
                     curr_state= curr_state,
@@ -78,12 +76,30 @@ class EconomicEnvironment:
                     prev_action = prev_action,
                     action = action,
                         )
+
+
             prev_state = curr_state
             curr_state = next_state
             prev_reward_array = reward_array
+            
 
             self.price_history.append(prev_state)
             self.quantity_history.append(quantity_array)
             self.reward_history.append(reward_array)
+
+            self.check_stable()
+            if self.tscore > self.tstable:
+                print("Converged after {} period!".format(t))
+                break
+
+    def check_stable(self):
+            #print([agent.stable_status for agent in self.agents])
+            if False in [agent.stable_status for agent in self.agents]:
+                self.tscore = 0
+            else:
+                self.tscore += 1
+
+
+        
                 
             

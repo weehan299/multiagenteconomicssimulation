@@ -32,11 +32,10 @@ agent3 = SARSA()
 
 def run(*args, **kwargs):
     env = EconomicEnvironment(
-        total_periods=kwargs.get("total_periods",1000),
+        total_periods=kwargs.get("total_periods",1000000),
         action_space_num=kwargs.get("action_space_num",15),
         agents=[
             agent1,
-            agent3,
             agent2,
         ]
     )
