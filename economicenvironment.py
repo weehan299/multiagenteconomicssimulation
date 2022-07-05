@@ -14,6 +14,48 @@ from validators import validate_total_periods,validate_action_space_num,validate
 
 @define
 class EconomicEnvironment:
+    """ Calculates demand
+
+    Attributes
+    ----------
+    agents : List[Agent]
+        List of Agent which can be made up of different strategies
+    demand : Demand
+        calculates multinomial logit demand based on prices and quality of firm
+
+    marginal_cost_array: list
+        marginal costs of each firm
+    quality_array : list
+        quality of each firm
+    competitive_prices_array : list
+        computes the Nash Price of each firm (same for every firm)
+    competitive_prices_array : list
+        computes the Monopoly Price of each firm (same for every firm)
+
+    action_space : list
+        set of pricing actions that firms can take ranging from Nash Price - xi to Monopoly Price + xi
+    action_space_num : int
+        specify the number of elements in the action space (default = 15)
+    total_periods : int
+        number of period that the simulation will run for (default = 1000000)
+    
+    tstable : int
+        specify number of period for convergence criteria (default = 100000)
+    tscore : int
+        to track algorithm reached convergence
+    
+
+    price_history : list 
+        record prices played by agents for data analysis purpose
+    quantity_history : list
+        record quantity demand of agents' product for data analysis purpose
+    reward_history : list = field(factory=list)
+        record rewards earned by agents for data analysis purpose
+
+    Returns:
+    -------
+        int: Returns a value from 0 to 1 based on the multinomial logit demand
+    """
     agents: List[Agent] = field(factory=list)
 
     demand: Demand = field(factory=Demand)
@@ -24,7 +66,7 @@ class EconomicEnvironment:
     monopoly_prices_array: np.array = field(init=False)
 
     action_space_num: int = field(default = 15, validator=[validators.instance_of(int), validate_action_space_num] )
-    total_periods: int = field(default=100000, validator=[validators.instance_of(int), validate_total_periods])
+    total_periods: int = field(default=1000000, validator=[validators.instance_of(int), validate_total_periods])
     xi: float = field(default=0.1, validator=[validators.instance_of(float), validate_xi])
 
     tstable:int = 100000
@@ -55,11 +97,28 @@ class EconomicEnvironment:
         prev_reward_array = (curr_state - self.marginal_cost_array) * quantity_array
 
         for t in tqdm(range(self.total_periods)):
-
+            
             next_state = np.array(
                 [agent.pick_strategy(curr_state, self.action_space, t) for agent in self.agents]
             )
+
+            """
+            if self.tscore == self.tstable:
+                print("Converged after {} period!".format(t))
+                print("original:", next_state)
+                next_state = np.array(
+                   [self.action_space[0]] +  [agent.pick_strategy(curr_state, self.action_space, t) for agent in self.agents[1:]]
+                )
+                print("new:", next_state)
             
+            if self.tscore == self.tstable+50:
+                break
+            """
+
+            if self.tscore == self.tstable:
+                break
+
+
             new_quantity_array = self.demand.get_quantity_demand(next_state, self.quality_array)
             reward_array = (next_state - self.marginal_cost_array) * new_quantity_array
 
@@ -88,9 +147,6 @@ class EconomicEnvironment:
             self.reward_history.append(reward_array)
 
             self.check_stable()
-            if self.tscore > self.tstable:
-                print("Converged after {} period!".format(t))
-                break
 
     def check_stable(self):
             #print([agent.stable_status for agent in self.agents])

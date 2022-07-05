@@ -1,50 +1,71 @@
 
 from email import header
 from typing import Tuple
+from attrs import define, field, validators
 
 import numpy as np
 from tabulate import tabulate
 
-def competitive_profits_compute(env) ->  np.array:
-    quality_array = np.array([agent.quality for agent in env.agents])
-    marginal_cost_array = np.array([agent.marginal_cost for agent in env.agents])
-    quantity_demand_given_competitive_prices = env.demand.get_quantity_demand(env.competitive_prices_array, quality_array)
-    competitive_profits = (env.competitive_prices_array - marginal_cost_array) * quantity_demand_given_competitive_prices
-    return competitive_profits
+from economicenvironment import EconomicEnvironment
 
-def monopoly_profits_compute(env) -> np.array:
-    quality_array = np.array([agent.quality for agent in env.agents])
-    marginal_cost_array = np.array([agent.marginal_cost for agent in env.agents])
-    quantity_demand_given_monopoly_prices = env.demand.get_quantity_demand(env.monopoly_prices_array, quality_array)
-    monopoly_profits = (env.monopoly_prices_array - marginal_cost_array)* quantity_demand_given_monopoly_prices
-    return monopoly_profits
+@define
+class Results:
 
-def normalised_measure(average_profits: np.array, competitive_profits: np.array, monopoly_profits: np.array) -> np.array:
-    return (average_profits- competitive_profits)/(monopoly_profits- competitive_profits)
+    env: EconomicEnvironment = field(factory=EconomicEnvironment)
+    competitive_profits: np.array = field(init=False)
+    average_prices: np.array = field(init=False)
+    average_profits: np.array = field(init=False)
+    monopoly_profits: np.array = field(init=False)
+    normalised_profits: np.array = field(init=False)
 
-def get_agents_parameters(env):
-    name = [agent.get_name() for agent in env.agents]
-    desc = [agent.get_parameters() for agent in env.agents]
+    price_history: list = field(factory=list)
+    quantity_history: list = field(factory=list)
+    reward_history: list = field(factory=list)
+
+
+    def __attrs_post_init__(self):
+        self.average_prices = np.array(self.env.price_history)[-25000:].mean(axis=0)
+        self.average_profits = np.array(self.env.reward_history)[-25000:].mean(axis=0)
+        self.competitive_profits = self.competitive_profits_compute()
+        self.monopoly_profits = self.monopoly_profits_compute()
+        self.normalised_profits = self.normalised_measure()
+        self.price_history = self.env.price_history
+        self.quantity_history = self.env.quantity_history
+        self.reward_history = self.env.reward_history
+
     
-    print(tabulate({"Name":name, "Description":desc },headers="keys"))
-    
-def results(env):
-    
-    name = [agent.get_name() for agent in env.agents]
+    def competitive_profits_compute(self) ->  np.array:
+        quality_array = np.array([agent.quality for agent in self.env.agents])
+        marginal_cost_array = np.array([agent.marginal_cost for agent in self.env.agents])
+        quantity_demand_given_competitive_prices = self.env.demand.get_quantity_demand(self.env.competitive_prices_array, quality_array)
+        competitive_profits = (self.env.competitive_prices_array - marginal_cost_array) * quantity_demand_given_competitive_prices
+        return competitive_profits
 
-    average_prices = np.array(env.price_history).mean(axis=0)
-    average_profits = np.array(env.reward_history).mean(axis=0)
-    competitive_profits = competitive_profits_compute(env)
-    monopoly_profits = monopoly_profits_compute(env)
-    normalised_profits = normalised_measure(average_profits, competitive_profits, monopoly_profits)
+    def monopoly_profits_compute(self) -> np.array:
+        quality_array = np.array([agent.quality for agent in self.env.agents])
+        marginal_cost_array = np.array([agent.marginal_cost for agent in self.env.agents])
+        quantity_demand_given_monopoly_prices = self.env.demand.get_quantity_demand(self.env.monopoly_prices_array, quality_array)
+        monopoly_profits = (self.env.monopoly_prices_array - marginal_cost_array)* quantity_demand_given_monopoly_prices
+        return monopoly_profits
 
-    print(tabulate({"Name": name,
-                "Bertrand-Nash Price": env.competitive_prices_array,
-                "Monopoly Price": env.monopoly_prices_array,
-                "Average Price": average_prices,
-                "Bertrand-Nash Profit": competitive_profits,
-                "Monopoly Profit": monopoly_profits,
-                "Normalised Profits": normalised_profits,
-            }, 
-            headers="keys"))
-    print("\n")
+    def normalised_measure(self) -> np.array:
+        return (self.average_profits- self.competitive_profits)/(self.monopoly_profits- self.competitive_profits)
+
+        
+    def print_results(self):
+        
+        name = [agent.get_name() for agent in self.env.agents]
+        desc = [agent.get_parameters() for agent in self.env.agents]
+
+        print(tabulate({"Name": name,
+                    "Bertrand-Nash Price": self.env.competitive_prices_array,
+                    "Monopoly Price": self.env.monopoly_prices_array,
+                    "Average Price": self.average_prices,
+                    "Bertrand-Nash Profit": self.competitive_profits,
+                    "Monopoly Profit": self.monopoly_profits,
+                    "Normalised Profits": self.normalised_profits,
+                }, 
+                headers="keys"))
+            
+        print(tabulate({"Name":name, "Description":desc },headers="keys"))
+        print("\n")

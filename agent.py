@@ -1,8 +1,3 @@
-########## agent  ##########
-# quality
-# costs
-# strategy
-# price (something you choose from action space) method
 
 from attrs import define, field,validators
 import abc
@@ -45,12 +40,13 @@ class Agent(metaclass=abc.ABCMeta):
 class QLearning(Agent):
 
     """ Q learning that stores Q in dictionary form"""
-    stable_status: bool = field(default=False)
 
     Q: Dict = field(default=None)
     alpha: float = field(default = 0.1,validator=[validators.instance_of(float), validate_alpha]) #learning rate
     gamma: float = field(default = 0.95,validator=[validators.instance_of(float), validate_gamma]) # discount rate
-    beta: float = field(default = 0.001,validator=[validators.instance_of(float), validate_beta]) #exploration parameter
+    beta: float = field(default = 0.00001,validator=[validators.instance_of(float), validate_beta]) #exploration parameter
+    
+    stable_status: bool = field(default=False)
 
     def pick_strategy(self, state: np.array, action_space: np.array, t:int) -> float:
         if not self.Q:
@@ -92,8 +88,8 @@ class QLearning(Agent):
     
     
     def get_parameters(self) -> str:
-        return ": quality={}, mc={}, alpha={}, gamma={} ,beta={}" .format(
-            self.quality, self.marginal_cost, self.alpha, self.gamma, self.beta
+        return ": quality={}, mc={}, alpha={},beta={}, gamma={} " .format(
+            self.quality, self.marginal_cost, self.alpha, self.beta, self.gamma
         )
 
     @staticmethod
@@ -107,9 +103,7 @@ class QLearning(Agent):
     
     
     
-    
-    
-    
+
     
     
     

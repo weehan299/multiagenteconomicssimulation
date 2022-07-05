@@ -22,14 +22,13 @@ class PriceCompute:
         return  minimize(fun=self.profits_of_firm_i , x0 = np.array(price_array[i]), args = (price_array, quality_array, marginal_cost_array, i)).x[0]
 
     def vector_reaction(self, nash_prices:np.array, quality_array:np.array, marginal_cost_array:np.array) -> np.array:
-
         return np.array(nash_prices) - np.array(
             [self.reaction_function(nash_prices, quality_array, marginal_cost_array, i) for i in range(len(nash_prices))]
         )
             
 
     def competitive_price_compute(self, marginal_cost_array: np.array, quality_array:np.array) -> np.array:
-        return fsolve(self.vector_reaction, marginal_cost_array,args=(quality_array,marginal_cost_array))
+        return fsolve(self.vector_reaction, x0=marginal_cost_array, args=(quality_array,marginal_cost_array))
 
     def joint_profit(self,price_array:np.array, quality_array:np.array, marginal_cost_array:np.array) -> float:
         return -1*np.sum((price_array - marginal_cost_array) * self.demand.get_quantity_demand(price_array, quality_array))
@@ -38,9 +37,3 @@ class PriceCompute:
         return minimize(fun=self.joint_profit,x0=marginal_cost_array,args=(quality_array, marginal_cost_array),).x
 
 
-"""
-y = Demand()
-x = PriceCompute(y)
-print(x.competitive_price_compute(np.array([1,1,1,1]),np.array([2,2,2,2])))
-print(x.monopoly_price_compute(np.array([1,1,1,1]),np.array([2,2,2,2])))
-"""

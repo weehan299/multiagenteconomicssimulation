@@ -1,47 +1,30 @@
-########## economic environment ##########
-#agents
-#action space
-#nash and monopoly prices
-#state space
-#demand
-
-
-########## agent  ##########
-# quality
-# costs
-# strategy
-# price (something you choose from action space) method
-
-
-########### Q learning ##############
-#inherit from agent strategy
-# Q matrix
-# discount factor delta
-# learning rate alpha
-# decision choice: epsilongreedy
-
-
 from agent import QLearning, QLearning2, SARSA
 from economicenvironment import EconomicEnvironment
-from showresults import results, get_agents_parameters
+from showresults import Results
 
-agent1 = QLearning()
-agent2 = QLearning()
-agent3 = SARSA()
 
 
 def run(*args, **kwargs):
+
+    num_agent = kwargs.get("num_agent",2)
+    #agent1 = QLearning(alpha = kwargs.get("alpha",0.125), beta = kwargs.get("beta", 1e-05), gamma = kwargs.get("gamma", 0.95))
+    #agent2 = QLearning(alpha = kwargs.get("alpha",0.125), beta = kwargs.get("beta", 1e-05), gamma = kwargs.get("gamma", 0.95))
+    #agent3 = SARSA()
+    
+    agents = []
+    for i in range(num_agent):
+        agents.append(QLearning(alpha = kwargs.get("alpha",0.125), beta = kwargs.get("beta", 1e-05), gamma = kwargs.get("gamma", 0.95)))
+
     env = EconomicEnvironment(
         total_periods=kwargs.get("total_periods",1000000),
         action_space_num=kwargs.get("action_space_num",15),
-        agents=[
-            agent1,
-            agent2,
-        ]
+        agents= agents
     )
     env.run_simulation()
-    results(env)
-    get_agents_parameters(env)
-    return env
 
-run()
+    results = Results(env)
+    return results
+
+if __name__ == "__main__":
+    results = run(num_agent=2)
+    results.print_results()
