@@ -102,7 +102,7 @@ class EconomicEnvironment:
                 [agent.pick_strategy(curr_state, self.action_space, t) for agent in self.agents]
             )
 
-            """
+            #used for artificially introducing low price point to determine behaviour of firm after convergence
             if self.tscore == self.tstable:
                 print("Converged after {} period!".format(t))
                 print("original:", next_state)
@@ -113,10 +113,9 @@ class EconomicEnvironment:
             
             if self.tscore == self.tstable+50:
                 break
-            """
 
-            if self.tscore == self.tstable:
-                break
+            #if self.tscore == self.tstable:
+                #break
 
 
             new_quantity_array = self.demand.get_quantity_demand(next_state, self.quality_array)
