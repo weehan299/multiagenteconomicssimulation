@@ -6,19 +6,19 @@ from showresults import Results
 
 def run(*args, **kwargs):
 
-    num_agent = kwargs.get("num_agent",2)
-    #agent1 = QLearning(alpha = kwargs.get("alpha",0.125), beta = kwargs.get("beta", 1e-05), gamma = kwargs.get("gamma", 0.95))
-    #agent2 = QLearning(alpha = kwargs.get("alpha",0.125), beta = kwargs.get("beta", 1e-05), gamma = kwargs.get("gamma", 0.95))
-    #agent3 = SARSA()
+    agent1 = QLearning(alpha = kwargs.get("alpha",0.125), beta = kwargs.get("beta", 1e-05), gamma = kwargs.get("gamma", 0.95))
+    agent2 = QLearning2(alpha = kwargs.get("alpha",0.125), beta = kwargs.get("beta", 1e-05), gamma = kwargs.get("gamma", 0.95))
+    agent3 = SARSA()
     
-    agents = []
-    for i in range(num_agent):
-        agents.append(QLearning(alpha = kwargs.get("alpha",0.125), beta = kwargs.get("beta", 1e-05), gamma = kwargs.get("gamma", 0.95)))
+    #num_agent = kwargs.get("num_agent",2)
+    #agents = []
+    #for i in range(num_agent):
+    #agents.append(QLearning(alpha = kwargs.get("alpha",0.125), beta = kwargs.get("beta", 1e-05), gamma = kwargs.get("gamma", 0.95)))
 
     env = EconomicEnvironment(
         total_periods=kwargs.get("total_periods",1000000),
         action_space_num=kwargs.get("action_space_num",15),
-        agents= agents
+        agents= [agent1,agent2]
     )
     env.run_simulation()
 

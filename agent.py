@@ -73,8 +73,9 @@ class QLearning(Agent):
         old_action_value = self.Q[tuple(curr_state)][action]
         new_action_value = self.Q[tuple(new_state)][self.exploit(new_state)]
         self.Q[tuple(curr_state)][action] = (1-self.alpha) * old_action_value +  self.alpha * (reward + self.gamma * new_action_value )
+        
+        #check convergence
         new_action_value_array = list(self.Q[tuple(curr_state)].values())
-
         self.stable_status = (np.argmax(old_action_value_array) == np.argmax(new_action_value_array))
     
 
@@ -124,6 +125,7 @@ class QLearning2(Agent):
     state_dim: Tuple = field(default = (None,))
     n_action_space: int = field(default = 0)
     
+    stable_status: bool = field(default=False)
 
     def pick_strategy(self, state: np.array, action_space: np.array, t:int) -> int:
         if self.Q is None:
@@ -156,10 +158,15 @@ class QLearning2(Agent):
         new_state_index = tuple(np.squeeze([np.where(action_space == i) for i in new_state]))
         action_index = np.squeeze(np.where(action_space == action))
         new_action_index = np.squeeze(np.where(action_space == self.exploit(new_state,action_space)))
+        old_action_value_array = copy.deepcopy(self.Q[curr_state_index])
         
         old_action_value = copy.deepcopy(self.Q[curr_state_index][action_index])
         new_action_value = copy.deepcopy(self.Q[new_state_index][new_action_index])
         self.Q[curr_state_index][action_index] = (1-self.alpha) * old_action_value +  self.alpha * (reward + self.gamma * new_action_value )
+        
+        #check convergence
+        new_action_value_array = self.Q[curr_state_index]
+        self.stable_status = np.argmax(new_action_value_array) == np.argmax(old_action_value_array)
     
 
     def initQ(self,num_agents:int, action_space:np.array) -> np.array:
@@ -172,6 +179,9 @@ class QLearning2(Agent):
         return ": quality={}, mc={}, alpha={}, gamma={} ,beta={}" .format(
             self.quality, self.marginal_cost, self.alpha, self.gamma, self.beta
         )
+
+
+
 
 @define
 class SARSA(QLearning):
@@ -192,8 +202,9 @@ class SARSA(QLearning):
         old_action_value = self.Q[tuple(old_state)][prev_action]
         curr_action_value = self.Q[tuple(curr_state)][action]
         self.Q[tuple(old_state)][prev_action] = (1-self.alpha) * old_action_value +  self.alpha * (reward + self.gamma * curr_action_value )
-        new_action_value_array = copy.deepcopy(list(self.Q[tuple(curr_state)].values()))
 
+        #check convergence
+        new_action_value_array = copy.deepcopy(list(self.Q[tuple(curr_state)].values()))
         self.stable_status = np.argmax(old_action_value_array) == np.argmax(new_action_value_array)
         
         

@@ -29,13 +29,14 @@ class EconomicEnvironment:
         quality of each firm
     competitive_prices_array : list
         computes the Nash Price of each firm (same for every firm)
-    competitive_prices_array : list
+    monopoly_prices_array : list
         computes the Monopoly Price of each firm (same for every firm)
 
     action_space : list
         set of pricing actions that firms can take ranging from Nash Price - xi to Monopoly Price + xi
     action_space_num : int
         specify the number of elements in the action space (default = 15)
+
     total_periods : int
         number of period that the simulation will run for (default = 1000000)
     
@@ -51,10 +52,6 @@ class EconomicEnvironment:
         record quantity demand of agents' product for data analysis purpose
     reward_history : list = field(factory=list)
         record rewards earned by agents for data analysis purpose
-
-    Returns:
-    -------
-        int: Returns a value from 0 to 1 based on the multinomial logit demand
     """
     agents: List[Agent] = field(factory=list)
 
@@ -102,6 +99,7 @@ class EconomicEnvironment:
                 [agent.pick_strategy(curr_state, self.action_space, t) for agent in self.agents]
             )
 
+            """
             #used for artificially introducing low price point to determine behaviour of firm after convergence
             if self.tscore == self.tstable:
                 print("Converged after {} period!".format(t))
@@ -113,9 +111,10 @@ class EconomicEnvironment:
             
             if self.tscore == self.tstable+50:
                 break
+            """
 
-            #if self.tscore == self.tstable:
-                #break
+            if self.tscore == self.tstable:
+                break
 
 
             new_quantity_array = self.demand.get_quantity_demand(next_state, self.quality_array)
@@ -145,6 +144,7 @@ class EconomicEnvironment:
             self.quantity_history.append(quantity_array)
             self.reward_history.append(reward_array)
 
+            #check for convergence
             self.check_stable()
 
     def check_stable(self):
