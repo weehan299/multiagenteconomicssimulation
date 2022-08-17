@@ -1,5 +1,3 @@
-
-from email import header
 from typing import Tuple
 from attrs import define, field, validators
 
@@ -63,6 +61,7 @@ class Results:
                     "Average Price": self.average_prices,
                     "Bertrand-Nash Profit": self.competitive_profits,
                     "Monopoly Profit": self.monopoly_profits,
+                    "Average Profits": self.average_profits,
                     "Normalised Profits": self.normalised_profits,
                 }, 
                 headers="keys"))

@@ -8,6 +8,7 @@ from typing import Dict,Tuple
 import copy
 
 from validators import validate_alpha, validate_gamma, validate_beta
+from policy import Policy, TimeDecliningExploration
 
 @define
 class Agent(metaclass=abc.ABCMeta):
@@ -42,20 +43,25 @@ class QLearning(Agent):
     """ Q learning that stores Q in dictionary form"""
 
     Q: Dict = field(default=None)
+    policy: Policy = field(factory = TimeDecliningExploration)
+
+    old_action_value: float = field(init=False)
+    curr_action_value: float= field(init=False)
+
     alpha: float = field(default = 0.1,validator=[validators.instance_of(float), validate_alpha]) #learning rate
     gamma: float = field(default = 0.95,validator=[validators.instance_of(float), validate_gamma]) # discount rate
-    beta: float = field(default = 0.00001,validator=[validators.instance_of(float), validate_beta]) #exploration parameter
     
     stable_status: bool = field(default=False)
+
 
     def pick_strategy(self, state: np.array, action_space: np.array, t:int) -> float:
         if not self.Q:
             self.Q = self.initQ(len(state), action_space)
 
-        if np.exp(- self.beta * t) > np.random.rand():
-            return random.choice(action_space)
-        else:
-            return self.exploit(state)
+        Q_value_array =list(self.Q[tuple(state)].values())
+        prob_weights = self.policy.give_prob_weights_for_each_action(Q_value_array,t)
+        return random.choices(action_space,weights=prob_weights,k=1)[0]
+
     
     def learn(
         self, 
@@ -70,18 +76,21 @@ class QLearning(Agent):
             ):
 
         old_action_value_array = copy.deepcopy(list(self.Q[tuple(curr_state)].values()))
-        old_action_value = self.Q[tuple(curr_state)][action]
-        new_action_value = self.Q[tuple(new_state)][self.exploit(new_state)]
+        old_action_value = copy.deepcopy(self.Q[tuple(curr_state)][action])
+        new_action_value = self.Q[tuple(new_state)][self.get_argmax(new_state)]
         self.Q[tuple(curr_state)][action] = (1-self.alpha) * old_action_value +  self.alpha * (reward + self.gamma * new_action_value )
+
+        self.old_action_value = old_action_value
+        self.curr_action_value = self.Q[tuple(curr_state)][action]
         
         #check convergence
         new_action_value_array = list(self.Q[tuple(curr_state)].values())
+        #self.stable_status = 1 if all(np.absolute(np.subtract(old_action_value_array , new_action_value_array)) < 1e-6) else 0
+        #self.stable_status = 1 if abs(old_action_value - self.Q[tuple(curr_state)][action]) < 1e-6 else 0
         self.stable_status = (np.argmax(old_action_value_array) == np.argmax(new_action_value_array))
+
     
-
-
-    def exploit(self, state: np.array) -> float:
-
+    def get_argmax(self, state: np.array) -> float:
         optimal_actions = [
             action for action, value in self.Q[tuple(state)].items() if value == max(self.Q[tuple(state)].values())
         ]
@@ -89,8 +98,8 @@ class QLearning(Agent):
     
     
     def get_parameters(self) -> str:
-        return ": quality={}, mc={}, alpha={},beta={}, gamma={} " .format(
-            self.quality, self.marginal_cost, self.alpha, self.beta, self.gamma
+        return ": quality={}, mc={}, alpha={}, gamma={}, policy = {} " .format(
+            self.quality, self.marginal_cost, self.alpha, self.gamma, self.policy.get_name()
         )
 
     @staticmethod
@@ -104,7 +113,6 @@ class QLearning(Agent):
     
     
     
-
     
     
     
@@ -115,28 +123,31 @@ class QLearning(Agent):
     
 @define
 class QLearning2(Agent):
-    """ Q learning that stores Q in a martrix form"""
+    """ Q learning that stores Q in a matrix form"""
 
     Q: np.array = field(default = None)
+    policy: Policy = field(factory = TimeDecliningExploration)
+
     alpha: float = field(default = 0.1,validator=[validators.instance_of(float), validate_alpha]) #learning rate
     gamma: float = field(default = 0.95,validator=[validators.instance_of(float), validate_gamma]) #discount rate
-    beta: float = field(default = 0.001,validator=[validators.instance_of(float), validate_beta])  # exploration decay rate
 
     state_dim: Tuple = field(default = (None,))
     n_action_space: int = field(default = 0)
     
     stable_status: bool = field(default=False)
 
-    def pick_strategy(self, state: np.array, action_space: np.array, t:int) -> int:
+    def pick_strategy(self, state: np.array, action_space: np.array, t:int) -> float:
         if self.Q is None:
             self.Q = self.initQ(len(state), action_space)
 
-        if np.exp(- self.beta * t) > np.random.rand():
-            return random.choice(action_space)
-        else:
-            return self.exploit(state, action_space)
+        state_index = tuple(np.squeeze([np.where(action_space == i) for i in state]))
+        Q_value_array =self.Q[tuple(state_index)]
+        prob_weights = self.policy.give_prob_weights_for_each_action(Q_value_array,t)
+        #print(prob_weights)
+        return random.choices(action_space,weights=prob_weights,k=1)[0]
 
-    def exploit(self, state: np.array, action_space:np.array) -> float:
+
+    def get_argmax(self, state: np.array, action_space:np.array) -> float:
         state_index = tuple(np.squeeze([np.where(action_space == i) for i in state]))
         optimal_actions = np.where(self.Q[state_index] == max(self.Q[state_index]))[0]
         return action_space[random.choice(optimal_actions)]
@@ -157,7 +168,7 @@ class QLearning2(Agent):
         curr_state_index = tuple(np.squeeze([np.where(action_space == i) for i in curr_state]))
         new_state_index = tuple(np.squeeze([np.where(action_space == i) for i in new_state]))
         action_index = np.squeeze(np.where(action_space == action))
-        new_action_index = np.squeeze(np.where(action_space == self.exploit(new_state,action_space)))
+        new_action_index = np.squeeze(np.where(action_space == self.get_argmax(new_state,action_space)))
         old_action_value_array = copy.deepcopy(self.Q[curr_state_index])
         
         old_action_value = copy.deepcopy(self.Q[curr_state_index][action_index])
@@ -176,8 +187,8 @@ class QLearning2(Agent):
         return Q
     
     def get_parameters(self) -> str:
-        return ": quality={}, mc={}, alpha={}, gamma={} ,beta={}" .format(
-            self.quality, self.marginal_cost, self.alpha, self.gamma, self.beta
+        return ": quality={}, mc={}, alpha={}, gamma={} " .format(
+            self.quality, self.marginal_cost, self.alpha, self.gamma
         )
 
 
@@ -209,3 +220,27 @@ class SARSA(QLearning):
         
         
         
+        
+@define
+class ConstantPricer(Agent):
+    stable_status: bool = field(default=True)
+    constant_price: bool=field(init=False)
+    def learn(
+        self, 
+        old_state: np.array,
+        curr_state:np.array,
+        new_state: np.array,
+        action_space:np.array,
+        prev_reward:float,
+        reward: float,
+        prev_action: float,
+        action:float
+            ):
+        pass
+
+    def pick_strategy(self, state: np.array, action_space: np.array, t:int) -> float:
+        self.constant_price = action_space[len(action_space)//2]
+        return self.constant_price
+    
+    def get_parameters(self) -> str:
+        return "Constant Price at: {}".format(round(self.constant_price,5))

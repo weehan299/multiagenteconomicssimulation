@@ -148,8 +148,14 @@ class EconomicEnvironment:
             self.check_stable()
 
     def check_stable(self):
-            #print([agent.stable_status for agent in self.agents])
-            if False in [agent.stable_status for agent in self.agents]:
+            if False in [agent.stable_status == 1 for agent in self.agents]:
+                self.tscore = 0
+            else:
+                self.tscore += 1
+
+
+    def check_stable2(self):
+            if False in [abs(agent.old_action_value - agent.curr_action_value) < 1e-6 for agent in self.agents]:
                 self.tscore = 0
             else:
                 self.tscore += 1
