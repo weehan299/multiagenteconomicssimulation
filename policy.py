@@ -44,7 +44,7 @@ class Boltzmann(Policy):
     def __attrs_post_init__(self):
         first_half =  np.linspace(self.temp_min, self.temp_max, num=self.tot_steps//2)
         second_half = [self.temp_min for number in range(self.tot_steps)]
-        #self.temperature_array = np.linspace(self.temp_min, self.temp_max, num=self.tot_steps)
+       # self.temperature_array = np.linspace(self.temp_min, self.temp_max, num=self.tot_steps)
         self.temperature_array = np.concatenate([first_half,second_half])
         print(self.temperature_array)
     def give_prob_weights_for_each_action(self, Q_value_array:List, t:int) -> List:

@@ -66,7 +66,7 @@ class EconomicEnvironment:
     total_periods: int = field(default=1000000, validator=[validators.instance_of(int), validate_total_periods])
     xi: float = field(default=0.1, validator=[validators.instance_of(float), validate_xi])
 
-    tstable:int = 100000
+    tstable:int = 200000
     tscore:int = 0
     
 

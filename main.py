@@ -8,8 +8,8 @@ from showresults import Results
 def run(*args, **kwargs):
 
     agent1 = QLearning(alpha = kwargs.get("alpha",0.125), gamma = kwargs.get("gamma", 0.95),
-                        #policy=Boltzmann(temp_max=kwargs.get("temp_max",3), temp_min=kwargs.get("temp_min",0.0001),tot_steps = kwargs.get("total_periods", 1000000)))
-                        policy=TimeDecliningExploration(beta = kwargs.get("beta", 1e-05)))
+                        policy=Boltzmann(temp_max=kwargs.get("temp_max",3), temp_min=kwargs.get("temp_min",0.0001),tot_steps = kwargs.get("total_periods", 1000000)))
+                        #policy=TimeDecliningExploration(beta = kwargs.get("beta", 1e-05)))
     agent2 = QLearning(alpha = kwargs.get("alpha",0.125), gamma = kwargs.get("gamma", 0.95), 
                         policy=TimeDecliningExploration(beta = kwargs.get("beta", 1e-05)))
                         #policy=Boltzmann(temp_max=kwargs.get("temp_max",3),temp_min=kwargs.get("temp_min",0.0001),tot_steps = kwargs.get("total_periods", 1000000)))
@@ -17,7 +17,7 @@ def run(*args, **kwargs):
     # agent3 = SARSA()
     
     num_agent = kwargs.get("num_agent",2)
-    agents = [agent1, agent2]
+    agents = [agent1, agent3]
     #for i in range(num_agent):
         #agents.append(QLearning(alpha = kwargs.get("alpha",0.125), gamma = kwargs.get("gamma", 0.95), 
                                 #policy=Boltzmann(temp_max=kwargs.get("temp_max",1), temp_min=kwargs.get("temp_min",0.01),
