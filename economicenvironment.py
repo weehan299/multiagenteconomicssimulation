@@ -7,7 +7,7 @@ from tqdm import tqdm
 
 from pricecompute import PriceCompute
 from demand import Demand
-from agent import Agent
+from agents.agent import Agent
 from validators import validate_total_periods,validate_action_space_num,validate_xi
 
 
@@ -84,6 +84,7 @@ class EconomicEnvironment:
     @staticmethod
     def init_action_space(competitive_price:float, monopoly_price: float, xi:float, step: int) -> np.array:
         return np.linspace(competitive_price - xi, monopoly_price + xi, step)
+
         
     def run_simulation(self):
         prev_state = random.choices(self.action_space, k=len(self.agents))
@@ -123,6 +124,8 @@ class EconomicEnvironment:
             for agent, action, prev_action, reward, prev_reward in zip(
                 self.agents, next_state, curr_state, reward_array, prev_reward_array):
 
+                print(action, prev_action, reward, prev_reward)
+
                 agent.learn(
                     old_state = prev_state,
                     curr_state= curr_state,
@@ -141,6 +144,58 @@ class EconomicEnvironment:
             
 
             self.price_history.append(prev_state)
+            self.quantity_history.append(quantity_array)
+            self.reward_history.append(reward_array)
+
+            #check for convergence
+            self.check_stable()
+
+
+    
+    def run_simulation_dont_provide_other_players_info(self):
+
+        prev_state_of_all_agents = random.choices(self.action_space, k=len(self.agents))
+        curr_state_of_all_agents = np.array(
+            [self.agents[i].pick_strategy(np.array([prev_state_of_all_agents[i]]), self.action_space, 0) for i in range(len(self.agents))]
+        )
+
+        quantity_array = self.demand.get_quantity_demand(curr_state_of_all_agents, self.quality_array)
+        prev_reward_array = (curr_state_of_all_agents - self.marginal_cost_array) * quantity_array
+
+        for t in tqdm(range(self.total_periods)):
+            
+            next_state_of_all_agents = np.array(
+                [self.agents[i].pick_strategy(np.array([curr_state_of_all_agents[i]]), self.action_space, t) for i in range(len(self.agents))]
+            )
+
+            if self.tscore == self.tstable:
+                break
+
+
+            new_quantity_array = self.demand.get_quantity_demand(next_state_of_all_agents, self.quality_array)
+            reward_array = (next_state_of_all_agents - self.marginal_cost_array) * new_quantity_array
+
+            for agent, prev_state, next_state, curr_state, reward, prev_reward in zip(
+                self.agents, prev_state_of_all_agents, next_state_of_all_agents, curr_state_of_all_agents, reward_array, prev_reward_array):
+
+                agent.learn(
+                    old_state = np.array([prev_state]),
+                    curr_state = np.array([curr_state]),
+                    new_state = np.array([next_state]),
+                    action_space= self.action_space,
+                    prev_reward = prev_reward,
+                    reward= reward,
+                    prev_action = curr_state,
+                    action = next_state,
+                        )
+
+
+            prev_state_of_all_agents = curr_state_of_all_agents
+            curr_state_of_all_agents = next_state_of_all_agents
+            prev_reward_array = reward_array
+            
+
+            self.price_history.append(prev_state_of_all_agents)
             self.quantity_history.append(quantity_array)
             self.reward_history.append(reward_array)
 

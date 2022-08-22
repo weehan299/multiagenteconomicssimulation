@@ -46,7 +46,6 @@ class Boltzmann(Policy):
         second_half = [self.temp_min for number in range(self.tot_steps)]
        # self.temperature_array = np.linspace(self.temp_min, self.temp_max, num=self.tot_steps)
         self.temperature_array = np.concatenate([first_half,second_half])
-        print(self.temperature_array)
     def give_prob_weights_for_each_action(self, Q_value_array:List, t:int) -> List:
         T = self.temperature_array[t]
         exponent = np.true_divide(Q_value_array - np.max(Q_value_array), T)
