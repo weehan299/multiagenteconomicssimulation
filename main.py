@@ -42,6 +42,7 @@ def run(*args, **kwargs):
     results = Results(env)
     return results
 
+#test hahahahahah
 if __name__ == "__main__":
     results = run(num_agent=2)
     results.print_results()
