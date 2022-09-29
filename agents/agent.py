@@ -350,3 +350,36 @@ class ConstantPricer(Agent):
     
     def get_parameters(self) -> str:
         return "Constant Price at: {}".format(round(self.constant_price,5))
+
+
+@define
+class TitforTat(Agent):
+    #only can be used when agent knows the state of other agents. 
+    # tit for tat agent placed as the second player. 
+    stable_status: bool = field(default=True)
+    min_price: float = field(default = 0)
+    def learn(
+        self, 
+        old_state: np.array,
+        curr_state:np.array,
+        new_state: np.array,
+        action_space:np.array,
+        prev_reward:float,
+        reward: float,
+        prev_action: float,
+        action:float
+            ):
+        pass
+
+    def pick_strategy(self, state: np.array, action_space: np.array, t:int) -> float:
+        if not self.min_price:
+            self.min_price = min(action_space)
+            print(self.min_price)
+
+        if state[0] < state[1]:
+            return state[0]
+        else:
+            return self.min_price
+    
+    def get_parameters(self) -> str:
+        return "Tit for Tat Price at: {}".format(round(self.min_price,5))

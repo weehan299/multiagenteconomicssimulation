@@ -124,7 +124,6 @@ class EconomicEnvironment:
             for agent, action, prev_action, reward, prev_reward in zip(
                 self.agents, next_state, curr_state, reward_array, prev_reward_array):
 
-                print(action, prev_action, reward, prev_reward)
 
                 agent.learn(
                     old_state = prev_state,
