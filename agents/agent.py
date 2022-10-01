@@ -374,9 +374,8 @@ class TitforTat(Agent):
     def pick_strategy(self, state: np.array, action_space: np.array, t:int) -> float:
         if not self.min_price:
             self.min_price = min(action_space)
-            print(self.min_price)
 
-        if state[0] < state[1]:
+        if state[0] >= state[1]:
             return state[0]
         else:
             return self.min_price
