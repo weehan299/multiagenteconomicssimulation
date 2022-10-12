@@ -28,14 +28,14 @@ def run(*args, **kwargs):
     # agent3 = SARSA()
     
     num_agent = kwargs.get("num_agent",2)
-    agents = [memory_agent1, memory_agent2]
+    agents = [agent1, agent2]
     #for i in range(num_agent):
         #agents.append(QLearning(alpha = kwargs.get("alpha",0.125), gamma = kwargs.get("gamma", 0.95), 
                                 #policy=Boltzmann(temp_max=kwargs.get("temp_max",1), temp_min=kwargs.get("temp_min",0.01),
                                                  #tot_steps = kwargs.get("total_periods", 1000000))))
     env = EconomicEnvironment(
         total_periods=kwargs.get("total_periods",1000000),
-        action_space_num=kwargs.get("action_space_num",15),
+        action_space_num=kwargs.get("action_space_num",5),
         agents= agents
     )
     #env.run_simulation_dont_provide_other_players_info()
