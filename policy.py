@@ -23,7 +23,7 @@ class TimeDecliningExploration(Policy):
 
     def give_prob_weights_for_each_action(self, Q_value_array:List, t:int) -> List:
         if np.exp(- self.beta * t) > np.random.rand():
-            return [1 for i in Q_value_array]
+            return [1/len(Q_value_array) for i in Q_value_array]
         else:
             return self.exploit(Q_value_array)
     
@@ -42,13 +42,16 @@ class Boltzmann(Policy):
     tot_steps: int = field(default = 1000000)
 
     def __attrs_post_init__(self):
-        first_half =  np.linspace(self.temp_min, self.temp_max, num=self.tot_steps//2)
-        second_half = [self.temp_min for number in range(self.tot_steps)]
-       # self.temperature_array = np.linspace(self.temp_min, self.temp_max, num=self.tot_steps)
-        self.temperature_array = np.concatenate([first_half,second_half])
+        #first_half =  np.linspace(self.temp_max, self.temp_min, num=self.tot_steps//2)
+        #second_half = [self.temp_min for number in range(self.tot_steps)]
+        #self.temperature_array = np.concatenate([first_half,second_half])
+        self.temperature_array = np.linspace(self.temp_max, self.temp_min, num=self.tot_steps)
+
     def give_prob_weights_for_each_action(self, Q_value_array:List, t:int) -> List:
         T = self.temperature_array[t]
-        exponent = np.true_divide(Q_value_array - np.max(Q_value_array), T)
+        exponent = np.true_divide(Q_value_array - np.max(Q_value_array), T)  #prevent numerical overflow
+        #exponent = np.true_divide(Q_value_array, T)  
+        #print(Q_value_array, exponent)
         return np.exp(exponent) / np.sum(np.exp(exponent))
 
     def get_name(self):
