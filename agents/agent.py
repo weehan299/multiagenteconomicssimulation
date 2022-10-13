@@ -127,16 +127,122 @@ class QLearningWithMemory(Agent):
         Q = {}
         for state in itertools.product(action_space, repeat=num_agents*(memory_length+1)):
             Q[state] = dict((price,0) for price in action_space)
+        print(Q)
         return Q
 
     @staticmethod
     def init_memory(num_agents:int, memory_length:int,action_space:np.array) -> np.array:
         #initialise with random memory from the start
         memory = np.array([random.choices(action_space, k=num_agents) for i in range(memory_length)])
-        print(memory)
         return memory
     
     
+
+    
+@define
+class Binary_State_QLearning(Agent):
+
+    """ Q learning that stores Q in dictionary form"""
+    # a agent state is the set of all past prices. 
+
+    Q: Dict = field(default=None)
+    policy: Policy = field(factory = TimeDecliningExploration)
+
+    states: np.array = field(default = [0,1])
+    memory_length: int = field(default = 1)
+    memory: list = field(default = None)
+
+    alpha: float = field(default = 0.1,validator=[validators.instance_of(float), validate_alpha]) #learning rate
+    gamma: float = field(default = 0.95,validator=[validators.instance_of(float), validate_gamma]) # discount rate
+
+    prob_weights: List = field(default = [0.5,0.5])
+    stable_status: bool = field(default=False)
+
+
+    def convert_into_binary_state(self,state,action_space):
+        expected_value = action_space[0]*self.prob_weights[0] + action_space[-1]*self.prob_weights[-1]
+        binary_state_representation = [0,0]
+        for i in range(len(state)):
+            if state[i] > expected_value:
+                binary_state_representation[i] = 1
+            elif state[i] < expected_value:
+                binary_state_representation[i] = 0
+            else:
+                #print(state[i], list(action_space).index(expected_value))
+                binary_state_representation[i] =  list(action_space).index(expected_value)
+        #print(state, self.prob_weights, expected_value, binary_state_representation)
+        return binary_state_representation
+        
+    def pick_strategy(self, state: np.array, action_space: np.array, t:int) -> float:
+        if not self.Q:
+            self.memory = self.init_memory(len(state), self.memory_length, action_space)
+            self.Q = self.init_Q(len(state), self.memory_length, action_space)
+        
+        binary_state = self.convert_into_binary_state(state, action_space)
+        state_with_memory = self.append_memory_to_state(binary_state) 
+        
+        Q_value_array =list(self.Q[tuple(state_with_memory)].values())
+
+        self.prob_weights = self.policy.give_prob_weights_for_each_action(Q_value_array,t)
+        #print(self.prob_weights)
+        return random.choices(action_space,weights=self.prob_weights,k=1)[0]
+
+    
+    def learn(
+        self, 
+        old_state: np.array,
+        curr_state:np.array,
+        new_state: np.array,
+        action_space:np.array,
+        prev_reward:float,
+        reward: float,
+        prev_action: float,
+        action:float
+            ):
+
+
+        self.update_memory(self.convert_into_binary_state(old_state,action_space))
+        curr_state_with_memory = self.append_memory_to_state(self.convert_into_binary_state(curr_state,action_space))
+    
+        old_action_value_array = copy.deepcopy(list(self.Q[tuple(curr_state_with_memory)].values()))
+
+        #print("old: ",self.Q[tuple(curr_state_with_memory)], self.prob_weights, reward, "state: ", curr_state_with_memory)
+        self.Q[tuple(curr_state_with_memory)][action_space[1]] = (1-self.alpha) * self.Q[tuple(curr_state_with_memory)][action_space[1]] +  self.alpha * (self.prob_weights[1] * reward)
+        self.Q[tuple(curr_state_with_memory)][action_space[0]] = (1-self.alpha) * self.Q[tuple(curr_state_with_memory)][action_space[0]] +  self.alpha * (self.prob_weights[0] * reward)
+        #print("new: ",self.Q[tuple(curr_state_with_memory)])
+        
+
+        #check convergence
+        new_action_value_array = list(self.Q[tuple(curr_state_with_memory)].values())
+        self.stable_status = (np.argmax(old_action_value_array) == np.argmax(new_action_value_array))
+
+    def append_memory_to_state(self, state:np.array) -> np.array:
+        temp = copy.deepcopy(self.memory.flatten())
+        result = np.concatenate((state,temp))
+        return result
+        
+    def update_memory(self, curr_state:np.array):
+        self.memory[1:] = self.memory[:-1]
+        self.memory[0] = curr_state
+
+    def get_parameters(self) -> str:
+        return ": quality={}, mc={}, alpha={}, gamma={}, policy = {} " .format(
+            self.quality, self.marginal_cost, self.alpha, self.gamma, self.policy.get_name()
+        )
+
+    def init_Q(self, num_agents:int, memory_length:int, action_space:np.array) -> Dict:
+        Q = {}
+        for state in itertools.product(self.states, repeat=num_agents*(memory_length+1)):
+            Q[state] = dict((price,random.uniform(0,1)) for price in action_space)
+        return Q
+
+    def init_memory(self, num_agents:int, memory_length:int,action_space:np.array) -> np.array:
+        #initialise with random memory from the start
+        memory = np.array([random.choices(self.states, k=num_agents) for i in range(memory_length)])
+        return memory
+    
+    
+
     
     
     

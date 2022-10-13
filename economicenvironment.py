@@ -117,6 +117,9 @@ class EconomicEnvironment:
             if self.tscore == self.tstable:
                 break
 
+            if self.tscore >= 199990:
+                print(agent.Q for agent in self.agents)
+
 
             new_quantity_array = self.demand.get_quantity_demand(next_state, self.quality_array)
             reward_array = (next_state - self.marginal_cost_array) * new_quantity_array

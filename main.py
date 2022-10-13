@@ -1,4 +1,4 @@
-from agents.agent import ConstantPricer, QLearning, QLearning2, SARSA, QLearningWithMemory,TitforTat
+from agents.agent import Binary_State_QLearning, ConstantPricer, QLearning, QLearning2, SARSA, QLearningWithMemory,TitforTat
 from economicenvironment import EconomicEnvironment
 from policy import Boltzmann, TimeDecliningExploration
 from showresults import Results
@@ -22,29 +22,38 @@ def run(*args, **kwargs):
                         #policy=Boltzmann(temp_max=kwargs.get("temp_max",3), temp_min=kwargs.get("temp_min",0.0001),tot_steps = kwargs.get("total_periods", 1000000)))
                         policy=TimeDecliningExploration(beta = kwargs.get("beta", 1e-05)))
     
+    binary_state_agent1 = Binary_State_QLearning(memory_length= 1, alpha = kwargs.get("alpha",0.125), gamma = kwargs.get("gamma", 0.95),
+                        policy=Boltzmann(temp_max=kwargs.get("temp_max",3), temp_min=kwargs.get("temp_min",0.0001),tot_steps = kwargs.get("total_periods", 1000000)))
+                        #policy=TimeDecliningExploration(beta = kwargs.get("beta", 1e-05)))
+    
+    binary_state_agent2 = Binary_State_QLearning(memory_length= 1, alpha = kwargs.get("alpha",0.125), gamma = kwargs.get("gamma", 0.95),
+                        policy=Boltzmann(temp_max=kwargs.get("temp_max",3), temp_min=kwargs.get("temp_min",0.0001),tot_steps = kwargs.get("total_periods", 1000000)))
+                        #policy=TimeDecliningExploration(beta = kwargs.get("beta", 1e-05)))
+    
     constant_agent = ConstantPricer()
     titfortat_agent = TitforTat()
 
     # agent3 = SARSA()
     
     num_agent = kwargs.get("num_agent",2)
-    agents = [agent1, agent2]
+    agents = [binary_state_agent1, binary_state_agent2]
     #for i in range(num_agent):
         #agents.append(QLearning(alpha = kwargs.get("alpha",0.125), gamma = kwargs.get("gamma", 0.95), 
                                 #policy=Boltzmann(temp_max=kwargs.get("temp_max",1), temp_min=kwargs.get("temp_min",0.01),
                                                  #tot_steps = kwargs.get("total_periods", 1000000))))
     env = EconomicEnvironment(
         total_periods=kwargs.get("total_periods",1000000),
-        action_space_num=kwargs.get("action_space_num",5),
-        agents= agents
+        action_space_num=kwargs.get("action_space_num",2),
+        agents= agents,
+        xi=kwargs.get("xi",0.0)
     )
+
     #env.run_simulation_dont_provide_other_players_info()
     env.run_simulation()
 
     results = Results(env)
     return results
 
-#test hahahahahah
 if __name__ == "__main__":
     results = run(num_agent=2)
     results.print_results()

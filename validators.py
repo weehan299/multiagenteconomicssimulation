@@ -5,7 +5,7 @@ def validate_action_space_num(self,attribute,value):
 
 def validate_total_periods(self,attribute,value):
     if value <= 0:
-        raise ValueError("total number of periods in action space should be positive")
+        raise ValueError("total number of periods in total period should be positive")
 
 def validate_xi(self,attribute,value):
     if value < 0:

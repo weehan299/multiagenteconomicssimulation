@@ -55,16 +55,20 @@ class Results:
         name = [agent.get_name() for agent in self.env.agents]
         desc = [agent.get_parameters() for agent in self.env.agents]
 
+        print(tabulate({
+                    "Bertrand Price": [self.env.competitive_prices_array[0]],
+                    "Monopoly Price": [self.env.monopoly_prices_array[0]],
+                    "Bertrand Profit": [self.competitive_profits[0]],
+                    "Monopoly Profit": [self.monopoly_profits[0]],
+                }, 
+                headers="keys"))
         print(tabulate({"Name": name,
-                    "Bertrand-Nash Price": self.env.competitive_prices_array,
-                    "Monopoly Price": self.env.monopoly_prices_array,
                     "Average Price": self.average_prices,
-                    "Bertrand-Nash Profit": self.competitive_profits,
-                    "Monopoly Profit": self.monopoly_profits,
-                    "Average Profits": self.average_profits,
-                    "Normalised Profits": self.normalised_profits,
+                    "Average Profit": self.average_profits,
+                    "Normalised Profit": self.normalised_profits,
                 }, 
                 headers="keys"))
             
         print(tabulate({"Name":name, "Description":desc },headers="keys"))
+
         print("\n")
