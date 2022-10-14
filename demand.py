@@ -25,7 +25,5 @@ class Demand:
     def get_quantity_demand(self, prices: np.array, qualities: np.array) -> np.array:
         """returns a value from 0 to 1 based on the multinomial logit demand. """
 
-
-
         return np.exp((qualities - prices)/self.mu)/(sum(np.exp((qualities-prices)/self.mu)) + np.exp(self.a0/self.mu))
 

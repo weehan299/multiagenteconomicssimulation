@@ -7,6 +7,7 @@ from tqdm import tqdm
 
 from pricecompute import PriceCompute
 from demand import Demand
+from reward import Reward
 from agents.agent import Agent
 from validators import validate_total_periods,validate_action_space_num,validate_xi
 
@@ -56,6 +57,7 @@ class EconomicEnvironment:
     agents: List[Agent] = field(factory=list)
 
     demand: Demand = field(factory=Demand)
+    reward: Reward = field(factory=Reward)
     action_space: np.array = field(init=False)
     marginal_cost_array: np.array = field(init=False)
     quality_array: np.array = field(init=False)
@@ -66,7 +68,7 @@ class EconomicEnvironment:
     total_periods: int = field(default=1000000, validator=[validators.instance_of(int), validate_total_periods])
     xi: float = field(default=0.1, validator=[validators.instance_of(float), validate_xi])
 
-    tstable:int = 200000
+    tstable:int = 10000
     tscore:int = 0
     
 
@@ -92,7 +94,7 @@ class EconomicEnvironment:
             [agent.pick_strategy(prev_state, self.action_space, 0) for agent in self.agents]
         )
         quantity_array = self.demand.get_quantity_demand(curr_state, self.quality_array)
-        prev_reward_array = (curr_state - self.marginal_cost_array) * quantity_array
+        prev_reward_array = self.reward.get_reward(curr_state, self.marginal_cost_array, quantity_array)
 
         for t in tqdm(range(self.total_periods)):
             
@@ -117,12 +119,8 @@ class EconomicEnvironment:
             if self.tscore == self.tstable:
                 break
 
-            if self.tscore >= 199990:
-                print(agent.Q for agent in self.agents)
-
-
             new_quantity_array = self.demand.get_quantity_demand(next_state, self.quality_array)
-            reward_array = (next_state - self.marginal_cost_array) * new_quantity_array
+            reward_array = self.reward.get_reward(next_state, self.marginal_cost_array, new_quantity_array)
 
             for agent, action, prev_action, reward, prev_reward in zip(
                 self.agents, next_state, curr_state, reward_array, prev_reward_array):

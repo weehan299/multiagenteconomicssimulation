@@ -1,6 +1,7 @@
 from agents.agent import Binary_State_QLearning, ConstantPricer, QLearning, QLearning2, SARSA, QLearningWithMemory,TitforTat
 from economicenvironment import EconomicEnvironment
 from policy import Boltzmann, TimeDecliningExploration
+from reward import ExpectedReward, StandardReward
 from showresults import Results
 
 
@@ -22,18 +23,17 @@ def run(*args, **kwargs):
                         #policy=Boltzmann(temp_max=kwargs.get("temp_max",3), temp_min=kwargs.get("temp_min",0.0001),tot_steps = kwargs.get("total_periods", 1000000)))
                         policy=TimeDecliningExploration(beta = kwargs.get("beta", 1e-05)))
     
-    binary_state_agent1 = Binary_State_QLearning(memory_length= 1, alpha = kwargs.get("alpha",0.125), gamma = kwargs.get("gamma", 0.95),
-                        policy=Boltzmann(temp_max=kwargs.get("temp_max",3), temp_min=kwargs.get("temp_min",0.0001),tot_steps = kwargs.get("total_periods", 1000000)))
+    binary_state_agent1 = Binary_State_QLearning(memory_length= 1, alpha = kwargs.get("alpha",0.2), gamma = kwargs.get("gamma", 0.95),
+                        policy=Boltzmann(lambda0=kwargs.get("lambda0",1000), lambda1=kwargs.get("lambda1",0.999)))
                         #policy=TimeDecliningExploration(beta = kwargs.get("beta", 1e-05)))
     
-    binary_state_agent2 = Binary_State_QLearning(memory_length= 1, alpha = kwargs.get("alpha",0.125), gamma = kwargs.get("gamma", 0.95),
-                        policy=Boltzmann(temp_max=kwargs.get("temp_max",3), temp_min=kwargs.get("temp_min",0.0001),tot_steps = kwargs.get("total_periods", 1000000)))
+    binary_state_agent2 = Binary_State_QLearning(memory_length= 1, alpha = kwargs.get("alpha",0.2), gamma = kwargs.get("gamma", 0.95),
+                        policy=Boltzmann(lambda0=kwargs.get("lambda0",1000), lambda1=kwargs.get("lambda1",0.999)))
                         #policy=TimeDecliningExploration(beta = kwargs.get("beta", 1e-05)))
     
     constant_agent = ConstantPricer()
     titfortat_agent = TitforTat()
 
-    # agent3 = SARSA()
     
     num_agent = kwargs.get("num_agent",2)
     agents = [binary_state_agent1, binary_state_agent2]
@@ -45,6 +45,7 @@ def run(*args, **kwargs):
         total_periods=kwargs.get("total_periods",1000000),
         action_space_num=kwargs.get("action_space_num",2),
         agents= agents,
+        reward= ExpectedReward(agents=agents),
         xi=kwargs.get("xi",0.0)
     )
 

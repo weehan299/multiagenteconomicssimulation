@@ -14,6 +14,7 @@ from policy import Policy, TimeDecliningExploration
 class Agent(metaclass=abc.ABCMeta):
     quality: float = field(default = 2)
     marginal_cost: float = field(default=1)
+    policy: Policy = field(factory = TimeDecliningExploration)
 
     @abc.abstractclassmethod
     def pick_strategy(self, state:np.array, action_space:np.array, t:int):
@@ -145,32 +146,39 @@ class Binary_State_QLearning(Agent):
     """ Q learning that stores Q in dictionary form"""
     # a agent state is the set of all past prices. 
 
+    Q_just_initialised: Dict = field(default=None)
     Q: Dict = field(default=None)
     policy: Policy = field(factory = TimeDecliningExploration)
 
     states: np.array = field(default = [0,1])
+    curr_state_with_memory: np.array = field(default = [0,0,0,0])
     memory_length: int = field(default = 1)
     memory: list = field(default = None)
 
     alpha: float = field(default = 0.1,validator=[validators.instance_of(float), validate_alpha]) #learning rate
     gamma: float = field(default = 0.95,validator=[validators.instance_of(float), validate_gamma]) # discount rate
 
-    prob_weights: List = field(default = [0.5,0.5])
+    # attributes used to check convergence
+    old_action_value: float = field(init=False) #used in checkstable2()
+    curr_action_value: float= field(init=False)
     stable_status: bool = field(default=False)
+
+    prob_weights: List = field(default = [0.5,0.5])
+    expected_value: float = field(default = 1)
 
 
     def convert_into_binary_state(self,state,action_space):
-        expected_value = action_space[0]*self.prob_weights[0] + action_space[-1]*self.prob_weights[-1]
+        self.expected_value = action_space[0]*self.prob_weights[0] + action_space[-1]*self.prob_weights[-1]
         binary_state_representation = [0,0]
         for i in range(len(state)):
-            if state[i] > expected_value:
+            if state[i] > self.expected_value:
                 binary_state_representation[i] = 1
-            elif state[i] < expected_value:
+            elif state[i] < self.expected_value:
                 binary_state_representation[i] = 0
             else:
-                #print(state[i], list(action_space).index(expected_value))
-                binary_state_representation[i] =  list(action_space).index(expected_value)
-        #print(state, self.prob_weights, expected_value, binary_state_representation)
+                #print(state[i], list(action_space).index(self.expected_value))
+                binary_state_representation[i] =  list(action_space).index(self.expected_value)
+        #print(state, self.prob_weights, self.expected_value, binary_state_representation)
         return binary_state_representation
         
     def pick_strategy(self, state: np.array, action_space: np.array, t:int) -> float:
@@ -202,19 +210,21 @@ class Binary_State_QLearning(Agent):
 
 
         self.update_memory(self.convert_into_binary_state(old_state,action_space))
-        curr_state_with_memory = self.append_memory_to_state(self.convert_into_binary_state(curr_state,action_space))
+        self.curr_state_with_memory = self.append_memory_to_state(self.convert_into_binary_state(curr_state,action_space))
     
-        old_action_value_array = copy.deepcopy(list(self.Q[tuple(curr_state_with_memory)].values()))
+        old_action_value_array = copy.deepcopy(list(self.Q[tuple(self.curr_state_with_memory)].values()))
 
         #print("old: ",self.Q[tuple(curr_state_with_memory)], self.prob_weights, reward, "state: ", curr_state_with_memory)
-        self.Q[tuple(curr_state_with_memory)][action_space[1]] = (1-self.alpha) * self.Q[tuple(curr_state_with_memory)][action_space[1]] +  self.alpha * (self.prob_weights[1] * reward)
-        self.Q[tuple(curr_state_with_memory)][action_space[0]] = (1-self.alpha) * self.Q[tuple(curr_state_with_memory)][action_space[0]] +  self.alpha * (self.prob_weights[0] * reward)
+        self.Q[tuple(self.curr_state_with_memory)][action_space[1]] = (1-self.alpha) * self.Q[tuple(self.curr_state_with_memory)][action_space[1]] +  self.alpha * (self.prob_weights[1] * reward)
+        self.Q[tuple(self.curr_state_with_memory)][action_space[0]] = (1-self.alpha) * self.Q[tuple(self.curr_state_with_memory)][action_space[0]] +  self.alpha * (self.prob_weights[0] * reward)
         #print("new: ",self.Q[tuple(curr_state_with_memory)])
         
 
         #check convergence
-        new_action_value_array = list(self.Q[tuple(curr_state_with_memory)].values())
-        self.stable_status = (np.argmax(old_action_value_array) == np.argmax(new_action_value_array))
+        new_action_value_array = list(self.Q[tuple(self.curr_state_with_memory)].values())
+        old_action_argmax_index = [index for index, item in enumerate(old_action_value_array) if item == max(old_action_value_array)]
+        new_action_argmax_index = [index for index, item in enumerate(new_action_value_array) if item == max(new_action_value_array)]
+        self.stable_status = (random.choice(old_action_argmax_index) == random.choice(new_action_argmax_index))
 
     def append_memory_to_state(self, state:np.array) -> np.array:
         temp = copy.deepcopy(self.memory.flatten())
@@ -225,15 +235,13 @@ class Binary_State_QLearning(Agent):
         self.memory[1:] = self.memory[:-1]
         self.memory[0] = curr_state
 
-    def get_parameters(self) -> str:
-        return ": quality={}, mc={}, alpha={}, gamma={}, policy = {} " .format(
-            self.quality, self.marginal_cost, self.alpha, self.gamma, self.policy.get_name()
-        )
 
     def init_Q(self, num_agents:int, memory_length:int, action_space:np.array) -> Dict:
         Q = {}
         for state in itertools.product(self.states, repeat=num_agents*(memory_length+1)):
             Q[state] = dict((price,random.uniform(0,1)) for price in action_space)
+            #Q[state] = dict((price,0.2) for price in action_space)
+        self.Q_just_initialised = copy.deepcopy(Q)
         return Q
 
     def init_memory(self, num_agents:int, memory_length:int,action_space:np.array) -> np.array:
@@ -241,7 +249,12 @@ class Binary_State_QLearning(Agent):
         memory = np.array([random.choices(self.states, k=num_agents) for i in range(memory_length)])
         return memory
     
-    
+    def get_parameters(self) -> str:
+        return ": quality={}, mc={}, alpha={}, gamma={}, policy = {} " .format(
+            self.quality, self.marginal_cost, self.alpha, self.gamma, self.policy.get_name()
+        )
+
+
 
     
     

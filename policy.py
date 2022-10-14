@@ -37,24 +37,20 @@ class TimeDecliningExploration(Policy):
 class Boltzmann(Policy):
     #larger the temperature, the more it explores
     temperature_array: List = field(init=False)
-    temp_max:float = field(default = 1)
-    temp_min:float = field(default = 0.01)
-    tot_steps: int = field(default = 1000000)
+    lambda0: float = field(default = 1000)
+    lambda1: float = field(default = 0.999)
 
-    def __attrs_post_init__(self):
-        #first_half =  np.linspace(self.temp_max, self.temp_min, num=self.tot_steps//2)
-        #second_half = [self.temp_min for number in range(self.tot_steps)]
-        #self.temperature_array = np.concatenate([first_half,second_half])
-        self.temperature_array = np.linspace(self.temp_max, self.temp_min, num=self.tot_steps)
 
     def give_prob_weights_for_each_action(self, Q_value_array:List, t:int) -> List:
-        T = self.temperature_array[t]
+        #T = self.temperature_array[t]
+        T = self.lambda0*(t+1)**(-self.lambda1)
         exponent = np.true_divide(Q_value_array - np.max(Q_value_array), T)  #prevent numerical overflow
         #exponent = np.true_divide(Q_value_array, T)  
         #print(Q_value_array, exponent)
+        #print(np.exp(exponent) / np.sum(np.exp(exponent)))
         return np.exp(exponent) / np.sum(np.exp(exponent))
 
     def get_name(self):
-        return "(" + type(self).__name__+ ": temp_max = " + str(self.temp_max) + ", temp_min = "+ str(self.temp_min) +")"
+        return "(" + type(self).__name__+ ": lambda0 = " + str(self.lambda0) + ", lambda1 = "+ str(self.lambda1) +")"
         
 

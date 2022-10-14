@@ -15,6 +15,7 @@ class Results:
     average_profits: np.array = field(init=False)
     monopoly_profits: np.array = field(init=False)
     normalised_profits: np.array = field(init=False)
+    normalised_profits_time_series: np.array = field(init=False)
 
     price_history: list = field(factory=list)
     quantity_history: list = field(factory=list)
@@ -27,6 +28,7 @@ class Results:
         self.competitive_profits = self.competitive_profits_compute()
         self.monopoly_profits = self.monopoly_profits_compute()
         self.normalised_profits = self.normalised_measure()
+        self.normalised_profits_time_series = self.time_series_normalised_measure()
         self.price_history = self.env.price_history
         self.quantity_history = self.env.quantity_history
         self.reward_history = self.env.reward_history
@@ -49,6 +51,8 @@ class Results:
     def normalised_measure(self) -> np.array:
         return (self.average_profits- self.competitive_profits)/(self.monopoly_profits- self.competitive_profits)
 
+    def time_series_normalised_measure(self) -> np.array:
+        return (self.env.reward_history - self.competitive_profits)/(self.monopoly_profits- self.competitive_profits)
         
     def print_results(self):
         
