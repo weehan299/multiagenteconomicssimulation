@@ -17,21 +17,23 @@ class Results:
     normalised_profits: np.array = field(init=False)
     normalised_profits_time_series: np.array = field(init=False)
 
-    price_history: list = field(factory=list)
-    quantity_history: list = field(factory=list)
-    reward_history: list = field(factory=list)
+    price_history: list = field(init=False)
+    quantity_history: list = field(init=False)
+    reward_history: list = field(init=False)
 
 
     def __attrs_post_init__(self):
-        self.average_prices = np.array(self.env.price_history)[-25000:].mean(axis=0)
-        self.average_profits = np.array(self.env.reward_history)[-25000:].mean(axis=0)
+        self.price_history = self.env.history.price_history
+        self.quantity_history = self.env.history.quantity_history
+        self.reward_history = self.env.history.reward_history
+
+        self.average_prices = np.array(self.env.history.price_history)[-25000:].mean(axis=0)
+        self.average_profits = np.array(self.env.history.reward_history)[-25000:].mean(axis=0)
         self.competitive_profits = self.competitive_profits_compute()
         self.monopoly_profits = self.monopoly_profits_compute()
         self.normalised_profits = self.normalised_measure()
         self.normalised_profits_time_series = self.time_series_normalised_measure()
-        self.price_history = self.env.price_history
-        self.quantity_history = self.env.quantity_history
-        self.reward_history = self.env.reward_history
+
 
     
     def competitive_profits_compute(self) ->  np.array:
@@ -52,7 +54,7 @@ class Results:
         return (self.average_profits- self.competitive_profits)/(self.monopoly_profits- self.competitive_profits)
 
     def time_series_normalised_measure(self) -> np.array:
-        return (self.env.reward_history - self.competitive_profits)/(self.monopoly_profits- self.competitive_profits)
+        return (self.reward_history - self.competitive_profits)/(self.monopoly_profits- self.competitive_profits)
         
     def print_results(self):
         
@@ -74,5 +76,7 @@ class Results:
                 headers="keys"))
             
         print(tabulate({"Name":name, "Description":desc },headers="keys"))
+
+        print("Reward Calculation used: " , self.env.reward.get_name())
 
         print("\n")

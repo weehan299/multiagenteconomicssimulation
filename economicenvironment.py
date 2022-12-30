@@ -1,14 +1,16 @@
+import sys
 from attrs import define, field, validators
 from typing import List
 import numpy as np
 import random
+import copy
 from tqdm import tqdm
-
+from history import History
 
 from pricecompute import PriceCompute
 from demand import Demand
 from reward import Reward
-from agents.agent import Agent
+from agents.agent import Agent, Mixed_Strategy_Binary_State_QLearning
 from validators import validate_total_periods,validate_action_space_num,validate_xi
 
 
@@ -63,18 +65,24 @@ class EconomicEnvironment:
     quality_array: np.array = field(init=False)
     competitive_prices_array: np.array = field(init=False)
     monopoly_prices_array: np.array = field(init=False)
+    
 
     action_space_num: int = field(default = 15, validator=[validators.instance_of(int), validate_action_space_num] )
     total_periods: int = field(default=1000000, validator=[validators.instance_of(int), validate_total_periods])
     xi: float = field(default=0.1, validator=[validators.instance_of(float), validate_xi])
 
-    tstable:int = 10000
+    tstable:int = 100000
     tscore:int = 0
     
+    #used for mixed strategy binary agent
+    average_expected_price:int = field(default = 0)
+    
 
+    history: History = field(factory=History)
     price_history: list = field(factory=list)
     quantity_history: list = field(factory=list)
     reward_history: list = field(factory=list)
+
 
     def __attrs_post_init__(self):
         self.marginal_cost_array = np.array([agent.marginal_cost for agent in self.agents])
@@ -94,7 +102,7 @@ class EconomicEnvironment:
             [agent.pick_strategy(prev_state, self.action_space, 0) for agent in self.agents]
         )
         quantity_array = self.demand.get_quantity_demand(curr_state, self.quality_array)
-        prev_reward_array = self.reward.get_reward(curr_state, self.marginal_cost_array, quantity_array)
+        prev_reward_array = self.reward.get_reward(curr_state, self.marginal_cost_array, quantity_array,self.action_space)
 
         for t in tqdm(range(self.total_periods)):
             
@@ -119,8 +127,19 @@ class EconomicEnvironment:
             if self.tscore == self.tstable:
                 break
 
+            #prob_weights_array = [agent.prob_weights for agent in self.agents]
             new_quantity_array = self.demand.get_quantity_demand(next_state, self.quality_array)
-            reward_array = self.reward.get_reward(next_state, self.marginal_cost_array, new_quantity_array)
+            reward_array = self.reward.get_reward(
+                price_array=next_state, 
+                marginal_cost_array = self.marginal_cost_array,
+                quantity_array = new_quantity_array,
+                action_space = self.action_space
+                #prob_weights = prob_weights_array,
+                )
+            
+            #used for mixed strategy agents
+            if all([type(mixed_agent) is Mixed_Strategy_Binary_State_QLearning for mixed_agent in self.agents]):
+                self.average_expected_price = np.mean([mixed_agent.expected_value for mixed_agent in self.agents])
 
             for agent, action, prev_action, reward, prev_reward in zip(
                 self.agents, next_state, curr_state, reward_array, prev_reward_array):
@@ -143,9 +162,13 @@ class EconomicEnvironment:
             prev_reward_array = reward_array
             
 
-            self.price_history.append(prev_state)
-            self.quantity_history.append(quantity_array)
-            self.reward_history.append(reward_array)
+            # data storage
+            #self.history.Q_history.append([copy.deepcopy(str(agent.Q)) for agent in self.agents])
+            #self.history.state_history.append([copy.deepcopy(agent.curr_state_with_memory) for agent in self.agents])  #qlearningwithmemory agent dont have curr_state_with_memory
+            self.history.price_history.append(copy.deepcopy(prev_state))
+            self.history.quantity_history.append(copy.deepcopy(quantity_array))
+            self.history.reward_history.append(copy.deepcopy(reward_array))
+            #self.history.prob_weights_history.append([copy.deepcopy(agent.prob_weights) for agent in self.agents]) #only binary q have this
 
             #check for convergence
             self.check_stable()
