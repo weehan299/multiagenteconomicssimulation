@@ -74,9 +74,6 @@ class EconomicEnvironment:
     tstable:int = 100000
     tscore:int = 0
     
-    #used for mixed strategy binary agent
-    average_expected_price:int = field(default = 0)
-    
 
     history: History = field(factory=History)
     price_history: list = field(factory=list)
@@ -101,6 +98,14 @@ class EconomicEnvironment:
         curr_state = np.array(
             [agent.pick_strategy(prev_state, self.action_space, 0) for agent in self.agents]
         )
+
+        #used for mixed strategy agents
+        if all([type(mixed_agent) is Mixed_Strategy_Binary_State_QLearning for mixed_agent in self.agents]):
+            self.average_expected_price = np.mean([mixed_agent.calculate_expected_price(self.action_space) for mixed_agent in self.agents])
+            curr_state = np.array(
+                [agent.pick_strategy(prev_state, self.action_space, self.average_expected_price, 0) for agent in self.agents]
+            )
+
         quantity_array = self.demand.get_quantity_demand(curr_state, self.quality_array)
         prev_reward_array = self.reward.get_reward(curr_state, self.marginal_cost_array, quantity_array,self.action_space)
 
@@ -118,11 +123,13 @@ class EconomicEnvironment:
                 next_state = np.array(
                    [self.action_space[0]] +  [agent.pick_strategy(curr_state, self.action_space, t) for agent in self.agents[1:]]
                 )
+                    
                 print("new:", next_state)
             
             if self.tscore == self.tstable+50:
                 break
             """
+
 
             if self.tscore == self.tstable:
                 break
@@ -140,6 +147,8 @@ class EconomicEnvironment:
             #used for mixed strategy agents
             if all([type(mixed_agent) is Mixed_Strategy_Binary_State_QLearning for mixed_agent in self.agents]):
                 self.average_expected_price = np.mean([mixed_agent.expected_value for mixed_agent in self.agents])
+                
+
 
             for agent, action, prev_action, reward, prev_reward in zip(
                 self.agents, next_state, curr_state, reward_array, prev_reward_array):
@@ -164,11 +173,11 @@ class EconomicEnvironment:
 
             # data storage
             #self.history.Q_history.append([copy.deepcopy(str(agent.Q)) for agent in self.agents])
-            #self.history.state_history.append([copy.deepcopy(agent.curr_state_with_memory) for agent in self.agents])  #qlearningwithmemory agent dont have curr_state_with_memory
-            self.history.price_history.append(copy.deepcopy(prev_state))
-            self.history.quantity_history.append(copy.deepcopy(quantity_array))
-            self.history.reward_history.append(copy.deepcopy(reward_array))
-            #self.history.prob_weights_history.append([copy.deepcopy(agent.prob_weights) for agent in self.agents]) #only binary q have this
+            #self.history.state_history.append([copy.deepcopy(agent.curr_state_with_memory) for agent in self.agents])  
+            self.history.add_to_price_history(copy.deepcopy(prev_state))
+            #self.history.quantity_history.append(copy.deepcopy(quantity_array))
+            self.history.add_to_reward_history(copy.deepcopy(reward_array))
+            #self.history.prob_weights_history.append([copy.deepcopy(agent.prob_weights) for agent in self.agents])
 
             #check for convergence
             self.check_stable()
@@ -221,6 +230,121 @@ class EconomicEnvironment:
             self.price_history.append(prev_state_of_all_agents)
             self.quantity_history.append(quantity_array)
             self.reward_history.append(reward_array)
+
+            #check for convergence
+            self.check_stable()
+
+
+
+    def run_simulation_for_mixed_strategy_agents(self):
+        ## TODO: Check if the algo is correct, add the reward system inside. 
+       
+        #used for mixed strategy agents
+        if not all([type(mixed_agent) is Mixed_Strategy_Binary_State_QLearning for mixed_agent in self.agents]):
+            raise ValueError("All agents must be of Mixed Strategy Binary Class")
+
+
+        prev_state = random.choices(self.action_space, k=len(self.agents))
+        prev_state_binary = random.choices([0,1], k=len(self.agents))
+
+        curr_state = np.array(
+            [agent.pick_strategy(prev_state_binary, self.action_space, 0) for agent in self.agents]
+        )
+       
+        average_expected_price = np.mean([mixed_agent.calculate_expected_price(self.action_space) for mixed_agent in self.agents])
+        curr_state_binary = np.array([1 if mixed_agent.expected_price >= average_expected_price else 0 for mixed_agent in self.agents])
+
+
+        prob_weights_array = [agent.prob_weights for agent in self.agents]
+        quantity_array = self.demand.get_quantity_demand(curr_state, self.quality_array)
+        #prev_reward_array = self.reward.get_average_reward(self.marginal_cost_array, quantity_array, self.quality_array, self.action_space,prob_weights_array)
+        #prev_conditional_reward_array = self.reward.get_conditional_reward(self.marginal_cost_array, quantity_array, self.quality_array, self.action_space,prob_weights_array)
+        
+
+        for t in tqdm(range(self.total_periods)):
+            #if t > 10:
+                #break
+            #print("++++++++++++++++++++++++")
+            next_state = np.array(
+                [agent.pick_strategy(curr_state_binary, self.action_space, t) for agent in self.agents]
+            )
+            average_expected_price = np.mean([mixed_agent.calculate_expected_price(self.action_space) for mixed_agent in self.agents])
+            next_state_binary = np.array([1 if mixed_agent.expected_price > average_expected_price else 0 for mixed_agent in self.agents])
+
+            #print(average_expected_price, next_state, next_state_binary, [mixed_agent.expected_price for mixed_agent in self.agents],[mixed_agent.prob_weights for mixed_agent in self.agents])
+
+            """
+            #used for artificially introducing low price point to determine behaviour of firm after convergence
+            if self.tscore == self.tstable:
+                print("Converged after {} period!".format(t))
+                print("original:", next_state)
+                next_state = np.array(
+                   [self.action_space[0]] +  [agent.pick_strategy(curr_state, self.action_space, t) for agent in self.agents[1:]]
+                )
+                print("new:", next_state)
+            
+            if self.tscore == self.tstable+50:
+                break
+            """
+
+            if self.tscore == self.tstable:
+                break
+
+
+            prob_weights_array = [agent.prob_weights for agent in self.agents]
+            #new_quantity_array = self.demand.get_quantity_demand(next_state, self.quality_array)
+
+            average_reward_array = self.reward.get_average_reward(
+                marginal_cost_array = self.marginal_cost_array,
+                quality_array = self.quality_array,
+                action_space = self.action_space,
+                prob_weights_array = prob_weights_array,
+                )
+            conditional_reward_array = self.reward.get_conditional_reward(
+                marginal_cost_array = self.marginal_cost_array,
+                quality_array = self.quality_array,
+                action_space = self.action_space,
+                prob_weights_array = prob_weights_array,
+                )
+
+            
+            
+
+            for agent, action, prev_action, average_reward, conditional_reward in zip(
+                self.agents, next_state, curr_state, average_reward_array, conditional_reward_array):
+
+
+                agent.learn(
+                    old_state = prev_state_binary,
+                    curr_state= curr_state_binary,
+                    new_state= next_state_binary,
+                    action_space= self.action_space,
+                    average_reward = average_reward,
+                    conditional_reward= conditional_reward,
+                    prev_action = prev_action,
+                    action = action,
+                        )
+
+
+            quantity_array = self.demand.get_quantity_demand(curr_state, self.quality_array)
+            reward_array = self.reward.get_reward(curr_state, self.marginal_cost_array, quantity_array,self.action_space)
+            
+            prev_state = curr_state
+            curr_state = next_state
+            prev_state_binary = curr_state_binary
+            curr_state_binary = next_state_binary
+
+
+            
+
+            # data storage
+            #self.history.Q_history.append([copy.deepcopy(str(agent.Q)) for agent in self.agents])
+            #self.history.state_history.append([copy.deepcopy(agent.curr_state_with_memory) for agent in self.agents])  #qlearningwithmemory agent dont have curr_state_with_memory
+            #self.history.state_history.append(copy.deepcopy(curr_state_binary))
+            self.history.price_history.append(copy.deepcopy(prev_state))
+            #self.history.quantity_history.append(copy.deepcopy(quantity_array))
+            self.history.reward_history.append(copy.deepcopy(reward_array))
+            #self.history.prob_weights_history.append([copy.deepcopy(agent.prob_weights) for agent in self.agents]) #only binary q have this
 
             #check for convergence
             self.check_stable()

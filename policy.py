@@ -42,15 +42,11 @@ class Boltzmann(Policy):
 
 
     def give_prob_weights_for_each_action(self, Q_value_array:List, t:int) -> List:
-        #T = self.temperature_array[t]
-        T = self.lambda0*(t+1)**(-self.lambda1)
+        T = 16*self.lambda0*(t+1)**(-self.lambda1)
         exponent = np.true_divide(Q_value_array - np.max(Q_value_array), T)  #prevent numerical overflow
-        #exponent = np.true_divide(Q_value_array, T)  
-        #print(Q_value_array, exponent)
-        #print(np.exp(exponent) / np.sum(np.exp(exponent)))
         return np.exp(exponent) / np.sum(np.exp(exponent))
 
     def get_name(self):
         return "(" + type(self).__name__+ ": lambda0 = " + str(self.lambda0) + ", lambda1 = "+ str(self.lambda1) +")"
         
-
+# constant change to 16 for regular q learning with action space size = 15
